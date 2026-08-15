@@ -1,0 +1,189 @@
+{
+  "app_name": "LifeDesk",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A calm, grounded, and highly readable personal finance tracker that builds trust through generous whitespace and tactile, organic colors.",
+  "color": {
+    "surface": "#FAF9F6",
+    "onSurface": "#1C1C1E",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#3A3A3C",
+    "surfaceTertiary": "#F2F2F7",
+    "onSurfaceTertiary": "#8E8E93",
+    "surfaceInverse": "#1C1C1E",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#4A7C59",
+    "brandPrimary": "#4A7C59",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#8DB596",
+    "onBrandSecondary": "#1C1C1E",
+    "brandTertiary": "#DDEADA",
+    "onBrandTertiary": "#2F4F38",
+    "success": "#34C759",
+    "onSuccess": "#FFFFFF",
+    "warning": "#FF9F0A",
+    "onWarning": "#FFFFFF",
+    "error": "#FF3B30",
+    "onError": "#FFFFFF",
+    "info": "#8E8E93",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E5EA",
+    "borderStrong": "#C7C7CC",
+    "divider": "#E5E5EA",
+    "dark": {
+      "surface": "#121212",
+      "onSurface": "#F2F2F7",
+      "surfaceSecondary": "#1C1C1E",
+      "onSurfaceSecondary": "#D1D1D6",
+      "surfaceTertiary": "#2C2C2E",
+      "onSurfaceTertiary": "#8E8E93",
+      "surfaceInverse": "#FAF9F6",
+      "onSurfaceInverse": "#1C1C1E",
+      "brand": "#6BB382",
+      "brandPrimary": "#6BB382",
+      "onBrandPrimary": "#121212",
+      "brandSecondary": "#8DB596",
+      "onBrandSecondary": "#121212",
+      "brandTertiary": "#2A4031",
+      "onBrandTertiary": "#A3CCAE",
+      "success": "#30D158",
+      "onSuccess": "#121212",
+      "warning": "#FF9F0A",
+      "onWarning": "#121212",
+      "error": "#FF453A",
+      "onError": "#121212",
+      "info": "#8E8E93",
+      "onInfo": "#121212",
+      "border": "#2C2C2E",
+      "borderStrong": "#3A3A3C",
+      "divider": "#2C2C2E"
+    }
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical breathing room. Use lg/xl around main content containers. Cards never flush to screen edge; always at least md margin. Empty space is intentional.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 1,
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use glass on Bottom tab bar when content scrolls behind it",
+      "Use glass on sticky headers over scrolling content",
+      "Use glass on Bottom-sheet headers and drag handles",
+      "Use glass on Featured / hero cards (frosted glass overlay over abstract background)"
+    ],
+    "dont's": [
+      "Do not apply glass to every button or list row",
+      "Do not apply glass to form fields or body content"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Beranda (Dashboard)",
+      "purpose": "A quick glance at overall financial health, showing total balance, monthly summary, and upcoming bills.",
+      "states": {
+        "loading": "Centered spinner or skeleton loading for cards.",
+        "empty": "Illustration with 'Belum ada transaksi bulan ini' (No transactions this month) and a CTA to add one.",
+        "error": "Readable error message with a 'Coba Lagi' (Retry) button."
+      },
+      "layout": "Hero section at the top featuring a glassmorphic card layered over the 'hero_abstract' background. The hero card displays 'Saldo Total' (Total Balance) in large typography and quick action buttons (Pemasukan, Pengeluaran, Transfer) grouped in rounded pill or square containers. Below the hero: 'Bulan Ini' (Income vs Expense progress), a horizontal scroll of 'Tagihan Terdekat' (Upcoming bills), and a vertical list of 'Transaksi Terakhir' (Recent transactions). Use a floating action button (FAB) in the bottom right for quick transaction entry."
+    },
+    {
+      "name": "Transaksi (Transactions)",
+      "purpose": "A detailed chronological list of all incomes, expenses, and transfers.",
+      "states": {
+        "loading": "Skeleton list items.",
+        "empty": "Illustration with 'Belum ada transaksi tersimpan' and CTA 'Tambah Transaksi'.",
+        "error": "Readable error message with a 'Coba Lagi' button."
+      },
+      "layout": "Sticky header with a glass effect containing a segmented control for filtering (Semua, Pemasukan, Pengeluaran). Transactions grouped by date with a subtle divider. Each transaction row has a tinted icon container (brandTertiary for income, error-tint for expense) indicating the category, title, account, and amount (green for income, default text color for expense). Tapping a row opens a bottom sheet with details."
+    },
+    {
+      "name": "Anggaran (Budgets)",
+      "purpose": "Track monthly spending limits per category to ensure financial safety.",
+      "states": {
+        "loading": "Skeleton budget cards.",
+        "empty": "Illustration with 'Belum ada anggaran bulanan' and CTA 'Buat Anggaran'.",
+        "error": "Readable error message with a 'Coba Lagi' button."
+      },
+      "layout": "List of budget cards. Each card displays the category icon, name, spent amount, and total limit. A progress bar indicates status: brandPrimary (safe), warning (approaching limit), or error (exceeded limit). Allow adding new budgets via a sticky bottom CTA or FAB."
+    },
+    {
+      "name": "Laporan (Reports)",
+      "purpose": "Visualize spending habits, savings goals, and net worth growth.",
+      "states": {
+        "loading": "Skeleton charts.",
+        "empty": "Illustration indicating not enough data to generate reports.",
+        "error": "Readable error message with a 'Coba Lagi' button."
+      },
+      "layout": "Top sticky tab bar (Laporan, Tabungan, Kekayaan). 'Laporan' shows a pie chart for expenses per category and a bar chart for 6-month cash flow. 'Tabungan' lists active savings goals with progress rings. 'Kekayaan' shows a line chart of net worth over time and a breakdown of assets vs. liabilities."
+    }
+  ],
+  "images": {
+    "hero_abstract": {
+      "url": "https://images.unsplash.com/photo-1680214180543-119d7f766381?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTZ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGdlb21ldHJpYyUyMHdhcm0lMjBzYW5kJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3ODY4MDA4OTZ8MA&ixlib=rb-4.1.0&q=85",
+      "dark": "https://images.unsplash.com/photo-1638864616275-9f0b291a2eb6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGdlb21ldHJpYyUyMGRhcmslMjBncmV5JTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3ODY4MDA4OTZ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract geometric background for hero dashboard card"
+    },
+    "empty_state_illustration": {
+      "url": "https://images.unsplash.com/photo-1614260938313-a7fc1a7ad0d2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTB8MHwxfHNlYXJjaHwxfHx3YWxsZXQlMjBlbXB0eSUyMHN0YXRlJTIwaWxsdXN0cmF0aW9ufGVufDB8fHx8MTc4NjgwMDg4N3ww&ixlib=rb-4.1.0&q=85",
+      "alt": "Empty wallet indicating no data or transactions"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the Indonesian localization rules: UI copy must be in Indonesian, currency must be formatted as IDR (e.g., 'Rp 1.000.000' or 'Rp 1.000.000,00'), and dates should follow Indonesian locale patterns. Set timezone to Asia/Jakarta.",
+    "Do NOT use any blue, indigo, or purple colors. The design relies heavily on a calm Sage Green/Moss Green palette mixed with warm sand tones and greys. Use the exact hex codes provided in the 'color' object.",
+    "Do not use emojis anywhere in the system UI. Rely entirely on Phosphor icons with consistent weights.",
+    "Implement glassmorphism selectively as detailed. The dashboard hero card should overlay the abstract background image with a vertical gradient scrim (transparent to surfaceInverse) to guarantee text contrast. Ensure the text inside the hero card uses 'onSurfaceInverse'.",
+    "Use a numeric keypad focused immediately upon launching the 'Add Transaction' flow (Amount-First entry pattern) to reduce friction.",
+    "In the Transactions list, use specific text color coding: green for incoming transactions (success) and the default text color (onSurface) for outgoing expenses, to avoid overwhelming the user with red.",
+    "In the Budget section, use the progress bar colors dynamically: brandPrimary (safe), warning (approaching), error (exceeded limit).",
+    "Implement subtle haptics on primary actions (saving a transaction, switching main tabs, toggling settings).",
+    "Ensure 'Plus Jakarta Sans' is loaded and used consistently for both display and text fonts with weights capped at 500."
+  ],
+  "haptics": {
+    "events": {
+      "primary_button_press": "impactLight",
+      "tab_change": "selection",
+      "toggle_switch": "impactLight",
+      "transaction_save_success": "notificationSuccess",
+      "budget_exceeded_alert": "notificationWarning"
+    }
+  }
+}
