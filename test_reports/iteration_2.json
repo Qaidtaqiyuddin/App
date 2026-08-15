@@ -1,0 +1,41 @@
+{
+  "summary": "Regression test after deployment-readiness refactor of recompute_account_balance (now two $group aggregations) and dashboard chart_6m (single $group aggregation). Ran 23 pytest cases against https://catatan-duit-2.preview.emergentagent.com/api — 23/23 PASSED. Verified: (1) account balances remain correct after create/update/delete of expense, adjustment (positive & negative), transfer, debt payment, savings deposit; (2) chart_6m returns exactly 6 consecutive calendar months, ending in the current WIB month, with per-bucket income/expense totals that exactly match summing raw transactions; (3) transfer does not affect dashboard income/expense; source -amount, destination +amount; (4) debt payment via debt_id fully pays a debt and flips status='paid'; (5) savings deposit via savings_goal_id increments current_amount by the transaction amount; (6) POST /api/seed?force=true seeds 5 accounts, 35+ transactions, 5 bills, 3 debts, 4 savings; /api/dashboard, /api/reports/net-worth, /api/search all return the expected shapes; (7) type=adjustment with negative amount correctly reduces balance and does not appear in income/expense buckets.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/transactions (debt payment)", "issue": "apply_debt_payment still records a payment regardless of transaction type — an income transaction carrying debt_id would decrement remaining. Guard type in {expense,transfer}. Carried over from iteration 1."},
+      {"endpoint": "POST /api/transactions (savings)", "issue": "apply_savings_deposit fires for any type; restrict to expense/transfer. Carried over from iteration 1."},
+      {"endpoint": "POST /api/reset", "issue": "Does not clear settings collection. Carried over from iteration 1."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_lifedesk_api.py",
+    "/app/backend/tests/conftest.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "No blockers. Iteration 1 minor items (debt/savings type guard, reset+settings) remain optional cleanup."
+  ],
+  "critical_code_review_comments": [
+    "recompute_account_balance now uses two aggregation pipelines — correct and much cheaper than in-memory sum. Note: relies on numeric 'amount' fields; adjustments with negative amounts add negative via agg_in (income/refund/adjustment sum), which is intentional and verified.",
+    "chart_6m aggregation with $substr on 'date' assumes YYYY-MM-DD string dates (they are). Match uses $gte f'{start_prefix}-01' which is safe under lexicographic compare for that format. Verified per-bucket totals match raw sums.",
+    "server.py still ~950 lines; splitting into routers per domain would improve maintainability but not blocking."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_lifedesk_api.py (added TestAdjustment: 3 cases; TestChart6M: 2 cases)",
+    "/app/test_reports/iteration_2.json",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "success_rate": {"backend": "100% (23/23)", "frontend": "not tested this iteration (backend-only request)"},
+  "seed_data_creation": "POST /api/seed?force=true executed before test run. Tests self-clean TEST_ transactions. TestReset wipes DB then re-seeds at the end.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Server WIB clock is currently Aug 2026 (not Jan 2026). chart_6m last bucket therefore = YYYY-08 where YYYY is the server year. Run tests serially: `pytest -n 0`. TestReset resets DB and re-seeds — do not parallelize.",
+  "rca_of_issue": "N/A — no regression. Both refactors (aggregation-based balance recompute and aggregation-based chart_6m) produce mathematically identical results to the previous per-transaction/per-month loops for all test scenarios including adjustments (positive & negative), transfers, and multi-account flows."
+}

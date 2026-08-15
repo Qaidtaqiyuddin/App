@@ -169,24 +169,21 @@ async def recompute_account_balance(account_id: str):
     account = await db.accounts.find_one({"id": account_id}, {"_id": 0})
     if not account:
         return
-    initial = account.get("initial_balance", 0)
-    total = initial
-    txns = await db.transactions.find({"$or": [{"account_id": account_id}, {"to_account_id": account_id}]}, {"_id": 0}).to_list(length=100000)
-    for t in txns:
-        if t["type"] == "income" or t["type"] == "refund":
-            if t["account_id"] == account_id:
-                total += t["amount"]
-        elif t["type"] == "expense":
-            if t["account_id"] == account_id:
-                total -= t["amount"]
-        elif t["type"] == "transfer":
-            if t["account_id"] == account_id:
-                total -= t["amount"]
-            if t.get("to_account_id") == account_id:
-                total += t["amount"]
-        elif t["type"] == "adjustment":
-            if t["account_id"] == account_id:
-                total += t["amount"]
+    total = account.get("initial_balance", 0)
+    # Money into this account: income/refund/adjustment where it's the source, plus transfers where it's the destination
+    agg_in = await db.transactions.aggregate([
+        {"$match": {"$or": [
+            {"account_id": account_id, "type": {"$in": ["income", "refund", "adjustment"]}},
+            {"to_account_id": account_id, "type": "transfer"},
+        ]}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}},
+    ]).to_list(length=1)
+    # Money out of this account: expense where it's the source, plus transfers where it's the source
+    agg_out = await db.transactions.aggregate([
+        {"$match": {"account_id": account_id, "type": {"$in": ["expense", "transfer"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}},
+    ]).to_list(length=1)
+    total += (agg_in[0]["total"] if agg_in else 0) - (agg_out[0]["total"] if agg_out else 0)
     await db.accounts.update_one({"id": account_id}, {"$set": {"current_balance": total}})
 
 
@@ -605,17 +602,36 @@ async def dashboard(month: Optional[int] = None, year: Optional[int] = None):
 
     top_expenses = sorted([t for t in txns_month if t["type"] == "expense"], key=lambda x: -x["amount"])[:5]
 
-    # 6-month chart (calendar-accurate)
-    chart = []
-    for i in range(5, -1, -1):
-        total_month = (y * 12 + (m - 1)) - i
-        cy, cm = divmod(total_month, 12)
+    # 6-month chart (calendar-accurate) — single aggregation instead of a per-month loop
+    start_total = (y * 12 + (m - 1)) - 5
+    sy, sm = divmod(start_total, 12)
+    sm += 1
+    start_prefix = f"{sy:04d}-{sm:02d}"
+    labels = []
+    chart_map = {}
+    for i in range(6):
+        tm = start_total + i
+        cy, cm = divmod(tm, 12)
         cm += 1
-        prefix_i = f"{cy:04d}-{cm:02d}"
-        m_txns = await db.transactions.find({"date": {"$regex": f"^{prefix_i}"}}, {"_id": 0}).to_list(length=10000)
-        m_income = sum(t["amount"] for t in m_txns if t["type"] in ("income", "refund"))
-        m_expense = sum(t["amount"] for t in m_txns if t["type"] == "expense")
-        chart.append({"label": prefix_i, "income": m_income, "expense": m_expense})
+        lbl = f"{cy:04d}-{cm:02d}"
+        labels.append(lbl)
+        chart_map[lbl] = {"label": lbl, "income": 0.0, "expense": 0.0}
+    agg = await db.transactions.aggregate([
+        {"$match": {"date": {"$gte": f"{start_prefix}-01"}}},
+        {"$group": {
+            "_id": {"ym": {"$substr": ["$date", 0, 7]}, "type": "$type"},
+            "total": {"$sum": "$amount"},
+        }},
+    ]).to_list(length=1000)
+    for row in agg:
+        lbl = row["_id"]["ym"]
+        tp = row["_id"]["type"]
+        if lbl in chart_map:
+            if tp in ("income", "refund"):
+                chart_map[lbl]["income"] += row["total"]
+            elif tp == "expense":
+                chart_map[lbl]["expense"] += row["total"]
+    chart = [chart_map[l] for l in labels]
 
     recent = await db.transactions.find({}, {"_id": 0}).sort([("date", -1), ("time", -1)]).to_list(length=8)
 

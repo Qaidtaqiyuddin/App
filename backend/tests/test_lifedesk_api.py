@@ -254,6 +254,93 @@ class TestSearch:
             assert k in d
 
 
+# ---------- Adjustment transaction ----------
+class TestAdjustment:
+    def test_positive_adjustment_increases_balance(self, api_client):
+        accts = api_client.get(f"{API}/accounts").json()
+        acc = accts[0]
+        before = acc["current_balance"]
+        r = api_client.post(f"{API}/transactions", json={
+            "date": today_wib(), "type": "adjustment", "amount": 77777,
+            "account_id": acc["id"], "note": "TEST_adj_pos",
+        })
+        assert r.status_code == 200
+        tid = r.json()["id"]
+        after = [a for a in api_client.get(f"{API}/accounts").json() if a["id"] == acc["id"]][0]
+        assert abs(after["current_balance"] - (before + 77777)) < 0.01
+        api_client.delete(f"{API}/transactions/{tid}")
+        rev = [a for a in api_client.get(f"{API}/accounts").json() if a["id"] == acc["id"]][0]
+        assert abs(rev["current_balance"] - before) < 0.01
+
+    def test_negative_adjustment_decreases_balance(self, api_client):
+        accts = api_client.get(f"{API}/accounts").json()
+        acc = accts[0]
+        before = acc["current_balance"]
+        r = api_client.post(f"{API}/transactions", json={
+            "date": today_wib(), "type": "adjustment", "amount": -12345,
+            "account_id": acc["id"], "note": "TEST_adj_neg",
+        })
+        assert r.status_code == 200
+        tid = r.json()["id"]
+        after = [a for a in api_client.get(f"{API}/accounts").json() if a["id"] == acc["id"]][0]
+        assert abs(after["current_balance"] - (before - 12345)) < 0.01
+        api_client.delete(f"{API}/transactions/{tid}")
+
+    def test_adjustment_not_in_income_or_expense(self, api_client):
+        accts = api_client.get(f"{API}/accounts").json()
+        acc = accts[0]
+        dash_before = api_client.get(f"{API}/dashboard").json()
+        r = api_client.post(f"{API}/transactions", json={
+            "date": today_wib(), "type": "adjustment", "amount": 5000,
+            "account_id": acc["id"], "note": "TEST_adj_dash",
+        })
+        tid = r.json()["id"]
+        dash_after = api_client.get(f"{API}/dashboard").json()
+        assert abs(dash_after["income"] - dash_before["income"]) < 0.01
+        assert abs(dash_after["expense"] - dash_before["expense"]) < 0.01
+        api_client.delete(f"{API}/transactions/{tid}")
+
+
+# ---------- 6-month chart calendar-accurate ----------
+class TestChart6M:
+    def test_chart_6m_consecutive_calendar_months(self, api_client):
+        d = api_client.get(f"{API}/dashboard").json()
+        chart = d["chart_6m"]
+        assert len(chart) == 6
+        labels = [c["label"] for c in chart]
+        # ensure YYYY-MM format
+        for lbl in labels:
+            assert len(lbl) == 7 and lbl[4] == "-"
+        # ensure sequential increments of 1 calendar month
+        def to_ord(lbl):
+            y, m = lbl.split("-")
+            return int(y) * 12 + int(m) - 1
+        ords = [to_ord(l) for l in labels]
+        for i in range(1, 6):
+            assert ords[i] - ords[i-1] == 1, f"non-consecutive months at {labels[i-1]}->{labels[i]}"
+        # last label = current WIB month
+        now = datetime.now(timezone(timedelta(hours=7)))
+        expected_last = f"{now.year:04d}-{now.month:02d}"
+        assert labels[-1] == expected_last, f"last chart label {labels[-1]} != current {expected_last}"
+
+    def test_chart_6m_totals_match_transactions(self, api_client):
+        d = api_client.get(f"{API}/dashboard").json()
+        chart = d["chart_6m"]
+        # Sum from raw transactions and compare per bucket
+        txns = api_client.get(f"{API}/transactions?limit=10000").json()
+        expected = {c["label"]: {"income": 0.0, "expense": 0.0} for c in chart}
+        for t in txns:
+            ym = t["date"][:7]
+            if ym in expected:
+                if t["type"] in ("income", "refund"):
+                    expected[ym]["income"] += t["amount"]
+                elif t["type"] == "expense":
+                    expected[ym]["expense"] += t["amount"]
+        for c in chart:
+            assert abs(c["income"] - expected[c["label"]]["income"]) < 0.01, f"income mismatch {c['label']}"
+            assert abs(c["expense"] - expected[c["label"]]["expense"]) < 0.01, f"expense mismatch {c['label']}"
+
+
 # ---------- Reset ----------
 class TestReset:
     def test_reset_invalid_confirm(self, api_client):
